@@ -2,7 +2,7 @@
   "expo": {
     "name": "약먹을시간",
     "slug": "medicine-alarm",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.medicinealarm.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "config": {
         "usesNonExemptEncryption": false,
         "googleMobileAdsAppId": "ca-app-pub-2370970221825852~8970383900"

@@ -39,3 +39,21 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IDE and editor files
+.vscode/
+.idea/
+.claude/
+
+# Development notes and documentation
+*.md
+!README.md
+
+# Test and utility files
+TestNotification.js
+generate-icon.html
+SplashScreen.js
+
+# EAS
+.eas-build-*
+eas-build-*.json
