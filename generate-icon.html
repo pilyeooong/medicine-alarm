@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>약먹을시간 아이콘 생성기</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .container {
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px auto;
+            max-width: 600px;
+            text-align: left;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            margin: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #5B9BD5;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #4A8BC2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💊 약먹을시간 아이콘</h1>
+
+        <canvas id="canvas1024" width="1024" height="1024"></canvas>
+
+        <div>
+            <button onclick="download(1024)">1024x1024 다운로드 (앱 아이콘)</button>
+        </div>
+
+        <div class="instructions">
+            <h3>📝 사용 방법:</h3>
+            <ol>
+                <li><strong>"1024x1024 다운로드"</strong> 버튼 클릭</li>
+                <li>다운로드된 <code>app-icon.png</code> 파일을 확인</li>
+                <li><code>medicine-alarm/assets/</code> 폴더에 복사</li>
+                <li>앱 재빌드: <code>npx expo run:ios</code></li>
+            </ol>
+            <p><strong>완료!</strong> 앱 아이콘과 로고가 모두 적용됩니다. 🎉</p>
+        </div>
+    </div>
+
+    <script>
+        function drawIcon(canvas) {
+            const ctx = canvas.getContext('2d');
+            const size = canvas.width;
+            const center = size / 2;
+
+            // 배경 원
+            ctx.fillStyle = '#5B9BD5';
+            ctx.beginPath();
+            ctx.arc(center, center, size * 0.475, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 알약 그리기
+            const pillWidth = size * 0.25;
+            const pillHeight = size * 0.35;
+            const pillX = center - pillWidth * 0.8;
+            const pillY = center - pillHeight / 2;
+
+            // 알약 몸체 (왼쪽 - 밝은 색)
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.ellipse(pillX + pillWidth/2, pillY + pillHeight/2, pillWidth/2, pillHeight/2, 0, Math.PI * 0.5, Math.PI * 1.5);
+            ctx.fill();
+
+            // 알약 몸체 (오른쪽 - 약간 어두운 색)
+            ctx.fillStyle = '#E8F4FB';
+            ctx.beginPath();
+            ctx.ellipse(pillX + pillWidth/2, pillY + pillHeight/2, pillWidth/2, pillHeight/2, 0, -Math.PI * 0.5, Math.PI * 0.5);
+            ctx.fill();
+
+            // 알약 테두리
+            ctx.strokeStyle = '#4A8BC2';
+            ctx.lineWidth = size * 0.012;
+            ctx.beginPath();
+            ctx.ellipse(pillX + pillWidth/2, pillY + pillHeight/2, pillWidth/2, pillHeight/2, 0, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 알약 중앙선
+            ctx.strokeStyle = '#4A8BC2';
+            ctx.lineWidth = size * 0.008;
+            ctx.setLineDash([size * 0.015, size * 0.015]);
+            ctx.beginPath();
+            ctx.moveTo(pillX + pillWidth/2, pillY);
+            ctx.lineTo(pillX + pillWidth/2, pillY + pillHeight);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 시계 아이콘
+            const clockSize = size * 0.15;
+            const clockX = center + size * 0.15;
+            const clockY = center - size * 0.15;
+
+            // 시계 배경
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(clockX, clockY, clockSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 시계 테두리
+            ctx.strokeStyle = '#4A8BC2';
+            ctx.lineWidth = size * 0.01;
+            ctx.beginPath();
+            ctx.arc(clockX, clockY, clockSize, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 시침
+            ctx.strokeStyle = '#4A8BC2';
+            ctx.lineWidth = size * 0.012;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(clockX, clockY);
+            ctx.lineTo(clockX, clockY - clockSize * 0.5);
+            ctx.stroke();
+
+            // 분침
+            ctx.lineWidth = size * 0.01;
+            ctx.beginPath();
+            ctx.moveTo(clockX, clockY);
+            ctx.lineTo(clockX + clockSize * 0.5, clockY);
+            ctx.stroke();
+
+            // 시계 중심점
+            ctx.fillStyle = '#4A8BC2';
+            ctx.beginPath();
+            ctx.arc(clockX, clockY, size * 0.008, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 알람 벨 (왼쪽)
+            ctx.strokeStyle = '#FF6B6B';
+            ctx.lineWidth = size * 0.01;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(clockX - clockSize * 0.7, clockY - clockSize * 0.7);
+            ctx.lineTo(clockX - clockSize * 0.9, clockY - clockSize * 1.1);
+            ctx.stroke();
+
+            // 알람 벨 (오른쪽)
+            ctx.beginPath();
+            ctx.moveTo(clockX + clockSize * 0.7, clockY - clockSize * 0.7);
+            ctx.lineTo(clockX + clockSize * 0.9, clockY - clockSize * 1.1);
+            ctx.stroke();
+        }
+
+        function download(size) {
+            const canvas = document.getElementById('canvas' + size);
+            const link = document.createElement('a');
+            link.download = 'app-icon.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // 페이지 로드 시 아이콘 그리기
+        window.onload = function() {
+            drawIcon(document.getElementById('canvas1024'));
+        };
+    </script>
+</body>
+</html>

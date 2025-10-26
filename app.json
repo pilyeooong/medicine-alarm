@@ -1,29 +1,41 @@
 {
   "expo": {
-    "name": "medicine-alarm",
+    "name": "약먹을시간",
     "slug": "medicine-alarm",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/app-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#5B9BD5"
     },
     "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+      "supportsTablet": false,
+      "bundleIdentifier": "com.medicinealarm.app",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false,
+        "googleMobileAdsAppId": "ca-app-pub-2370970221825852~8970383900"
       },
-      "edgeToEdgeEnabled": true
+      "infoPlist": {
+        "GADApplicationIdentifier": "ca-app-pub-2370970221825852~8970383900"
+      }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-2370970221825852~8970383900"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d6672c14-88c0-45c0-a68f-716916fc25d9"
+      }
     }
   }
 }
