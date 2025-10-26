@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>약먹을시간 - 복용 알림 앱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #5B9BD5 0%, #7DD3C0 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 24px;
+            padding: 48px;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        .icon {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, #7DD3C0 0%, #5B9BD5 100%);
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+        }
+        h1 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 16px;
+        }
+        .subtitle {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 32px;
+        }
+        .features {
+            text-align: left;
+            margin: 32px 0;
+        }
+        .feature {
+            display: flex;
+            align-items: center;
+            margin: 16px 0;
+            padding: 16px;
+            background: #f5f5f5;
+            border-radius: 12px;
+        }
+        .feature-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+        .download {
+            margin-top: 32px;
+            padding: 16px 32px;
+            background: #5B9BD5;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .download:hover {
+            background: #4A8BC2;
+        }
+        .coming-soon {
+            background: #7DD3C0;
+        }
+        .footer {
+            margin-top: 32px;
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">💊</div>
+        <h1>약먹을시간</h1>
+        <p class="subtitle">나만의 복용 알림 도우미</p>
+
+        <div class="features">
+            <div class="feature">
+                <span class="feature-icon">⏰</span>
+                <div>
+                    <strong>정확한 시간 알림</strong><br>
+                    설정한 시간에 놓치지 않고 알림을 받으세요
+                </div>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">📝</span>
+                <div>
+                    <strong>간편한 약 등록</strong><br>
+                    약 이름, 복용 시간을 쉽게 등록하고 관리하세요
+                </div>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">✅</span>
+                <div>
+                    <strong>복용 기록 추적</strong><br>
+                    복용 여부를 체크하고 기록을 확인하세요
+                </div>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">🎨</span>
+                <div>
+                    <strong>직관적인 인터페이스</strong><br>
+                    누구나 쉽게 사용할 수 있는 깔끔한 디자인
+                </div>
+            </div>
+        </div>
+
+        <a href="#" class="download coming-soon">App Store 출시 예정</a>
+
+        <div class="footer">
+            © 2025 약먹을시간. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
