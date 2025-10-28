@@ -15,21 +15,22 @@ try {
 
 const adUnitId = __DEV__
   ? TestIds?.BANNER
-  : 'ca-app-pub-2370970221825852/4848317827';  // iOS 배너 광고 단위 ID
+  : Platform.select({
+      ios: 'ca-app-pub-2370970221825852/4848317827',
+    }) || TestIds?.BANNER;
 
 export const AdBanner = () => {
   const [isAdLoaded, setIsAdLoaded] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [adError, setAdError] = useState(null);
 
   useEffect(() => {
     const initializeAdMob = async () => {
       try {
         await mobileAds().initialize();
         setIsInitialized(true);
-        console.log('AdMob 초기화 완료');
+        console.log('✅ AdMob 초기화 완료');
       } catch (error) {
-        console.log('AdMob 초기화 실패:', error.message);
+        console.error('❌ AdMob 초기화 실패:', error);
         setIsInitialized(false);
       }
     };
@@ -37,12 +38,28 @@ export const AdBanner = () => {
     if (mobileAds) {
       initializeAdMob();
     } else {
+      console.log('⚠️ AdMob 모듈을 사용할 수 없습니다');
       setIsInitialized(false);
     }
   }, []);
 
-  // AdMob이 초기화되지 않았으면 빈 공간
-  if (!isInitialized || !BannerAd) {
+  // AdMob이 초기화되지 않았으면 로딩 표시
+  if (!isInitialized) {
+    return (
+      <View style={{
+        alignItems: 'center',
+        paddingVertical: 10,
+        minHeight: 70,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center'
+      }}>
+        <Text style={{ color: '#666', fontSize: 12 }}>광고 로딩 중...</Text>
+      </View>
+    );
+  }
+
+  // BannerAd가 없으면 표시하지 않음
+  if (!BannerAd) {
     return null;
   }
 
@@ -54,21 +71,17 @@ export const AdBanner = () => {
       minHeight: 70,
       justifyContent: 'center'
     }}>
-      {!adError && (
-        <BannerAd
-          unitId={adUnitId}
-          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-          onAdLoaded={() => {
-            console.log('✅ 광고 로드 성공');
-            setIsAdLoaded(true);
-            setAdError(null);
-          }}
-          onAdFailedToLoad={(error) => {
-            console.log('⚠️ 광고 로드 실패 (정상 동작):', error.message);
-            setAdError(error);
-          }}
-        />
-      )}
+      <BannerAd
+        unitId={adUnitId}
+        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        onAdLoaded={() => {
+          console.log('✅ 광고 로드 성공');
+          setIsAdLoaded(true);
+        }}
+        onAdFailedToLoad={(error) => {
+          console.log('⚠️ 광고 로드 실패:', error.message);
+        }}
+      />
     </View>
   );
 };
