@@ -1,20 +1,30 @@
 # AdMob 배너 광고 설정 가이드
 
+**최종 업데이트:** 2025-10-28
+**프로젝트:** 약먹을시간 (medicine-alarm)
+**버전:** 1.0.4
+
 ## ✅ 완료된 작업
 
 1. **react-native-google-mobile-ads 패키지 추가**
-   - package.json에 추가됨
+   - package.json에 추가됨 (v15.8.1)
    - app.json에 플러그인 설정 완료
 
 2. **배너 광고 코드 구현**
-   - 모든 화면(Home, Detail, Edit)에 하단 배너 추가
-   - 테스트 광고 ID 설정 (개발 중)
-   - 실제 광고 ID 교체 준비 완료
+   - `components/AdBanner.js` 컴포넌트 생성
+   - App.js 하단에 AdBanner 추가
+   - 개발/프로덕션 환경 분리
+   - 실제 광고 ID 적용 완료
 
 3. **UI 조정**
    - 광고와 겹치지 않도록 레이아웃 조정
-   - FAB 버튼 위치 조정
+   - FAB 버튼 위치 조정 (광고 위로)
    - 리스트/폼 스크롤 영역 조정
+
+4. **프로덕션 배포 완료**
+   - 실제 광고 단위 ID 적용
+   - TestFlight 테스트 완료
+   - App Store 배포 준비 완료
 
 ## 🚀 실제 배포 전 설정
 
@@ -223,6 +233,172 @@ npm start
 - AdMob 공식 사이트: https://admob.google.com
 - AdMob 시작 가이드: https://developers.google.com/admob/ios/quick-start
 - react-native-google-mobile-ads 문서: https://docs.page/invertase/react-native-google-mobile-ads
+
+---
+
+## 🔧 문제 해결 (Troubleshooting)
+
+### 문제 1: TestFlight에서 광고가 표시되지 않음
+
+**증상**:
+- 개발 환경에서는 테스트 광고가 정상 표시
+- TestFlight 배포 후 실제 광고가 표시되지 않음
+- 광고 영역이 비어있거나 "광고 로딩 중..." 텍스트만 표시
+
+**원인**:
+`AdBanner.js` 컴포넌트에서 초기화 상태를 확인할 때 로딩 텍스트를 표시하면, `BannerAd` 컴포넌트가 렌더링되지 않아 광고가 로드되지 않음.
+
+**잘못된 코드**:
+```javascript
+// ❌ 이렇게 하면 광고가 안 나옴
+if (!isInitialized) {
+  return (
+    <View>
+      <Text>광고 로딩 중...</Text>
+    </View>
+  );
+}
+
+if (!BannerAd) {
+  return null;
+}
+
+return (
+  <View>
+    <BannerAd unitId={adUnitId} ... />
+  </View>
+);
+```
+
+**올바른 코드**:
+```javascript
+// ✅ 이렇게 해야 광고가 나옴
+if (!isInitialized || !BannerAd) {
+  return null;  // 아무것도 표시하지 않음
+}
+
+return (
+  <View style={{
+    alignItems: 'center',
+    backgroundColor: '#e3f2fd',
+    paddingVertical: 10,
+    minHeight: 70,
+    justifyContent: 'center'
+  }}>
+    <BannerAd
+      unitId={adUnitId}
+      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+      onAdLoaded={() => {
+        console.log('✅ 광고 로드 성공');
+        setIsAdLoaded(true);
+      }}
+      onAdFailedToLoad={(error) => {
+        console.log('⚠️ 광고 로드 실패:', error.message);
+      }}
+    />
+  </View>
+);
+```
+
+**핵심 포인트**:
+- 초기화 전에는 **아무것도 렌더링하지 않아야** `BannerAd`가 정상 로드됨
+- 로딩 텍스트나 다른 UI를 표시하면 광고 컴포넌트가 마운트되지 않음
+- `isInitialized`와 `BannerAd` 체크를 하나의 조건으로 합쳐서 `null` 반환
+
+### 문제 2: 시뮬레이터에서 테스트 광고 네트워크 에러
+
+**증상**:
+- iOS 시뮬레이터에서 "cannot parse response" 에러
+- 광고 영역은 있지만 광고가 로드되지 않음
+
+**원인**:
+iOS 시뮬레이터의 네트워크 제한으로 인한 정상적인 현상. 실제 기기에서는 문제없이 작동함.
+
+**해결 방법**:
+- **개발 중**: 시뮬레이터 에러는 무시하고 실제 기기나 TestFlight에서 테스트
+- **테스트 광고 ID 사용 확인**: `__DEV__` 플래그가 올바르게 설정되어 있는지 확인
+```javascript
+const adUnitId = __DEV__
+  ? 'ca-app-pub-3940256099942544/2934735716'  // Google 공식 테스트 ID
+  : Platform.select({
+      ios: 'ca-app-pub-2370970221825852/4848317827',
+    });
+```
+
+### 문제 3: 개발 환경과 프로덕션 환경 구분
+
+**확인 방법**:
+```javascript
+// App.js 또는 AdBanner.js에서
+console.log('🔧 개발 모드:', __DEV__);
+console.log('📱 플랫폼:', Platform.OS);
+console.log('🎯 광고 ID:', adUnitId);
+```
+
+**올바른 설정**:
+- **개발 중 (`__DEV__ === true`)**: 테스트 광고 ID 사용
+- **프로덕션 (`__DEV__ === false`)**: 실제 광고 단위 ID 사용
+- **app.json**: 실제 App ID 설정 필요
+
+### 문제 4: AdMob 초기화 실패
+
+**증상**:
+- 콘솔에 "❌ AdMob 초기화 실패" 메시지
+- 광고가 전혀 표시되지 않음
+
+**확인 사항**:
+1. **app.json 설정 확인**:
+```json
+{
+  "expo": {
+    "ios": {
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-XXXXX~XXXXX"
+      },
+      "infoPlist": {
+        "GADApplicationIdentifier": "ca-app-pub-XXXXX~XXXXX"
+      }
+    },
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-XXXXX~XXXXX"
+        }
+      ]
+    ]
+  }
+}
+```
+
+2. **Info.plist 동기화 확인**:
+```bash
+npx expo prebuild --clean
+```
+
+3. **패키지 재설치**:
+```bash
+rm -rf node_modules
+npm install
+```
+
+### 디버깅 체크리스트
+
+프로덕션 배포 전 반드시 확인:
+
+- [ ] `__DEV__` 플래그가 올바르게 작동하는지 확인
+- [ ] 테스트 광고가 개발 환경에서 표시되는지 확인
+- [ ] App ID와 광고 단위 ID가 올바르게 설정되었는지 확인
+- [ ] `AdBanner.js`에서 초기화 체크 로직이 올바른지 확인 (로딩 텍스트 제거)
+- [ ] Info.plist가 app.json과 동기화되었는지 확인
+- [ ] TestFlight 빌드에서 실제 광고가 표시되는지 확인
+- [ ] 콘솔 로그에서 "✅ 광고 로드 성공" 메시지 확인
+
+### 참고: kr-running-schedule-app 패턴
+
+검증된 작동 패턴은 다음 프로젝트에서 확인 가능:
+- `kr-running-schedule-app/components/AdBanner.tsx`
+- 핵심: 초기화 실패 시 `null` 반환, 로딩 UI 없음
 
 ---
 
