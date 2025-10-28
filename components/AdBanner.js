@@ -13,11 +13,12 @@ try {
   // Expo Go 환경에서는 애드몹 사용 불가
 }
 
+// 개발 환경에서는 Google 테스트 광고 ID 사용
 const adUnitId = __DEV__
-  ? TestIds?.BANNER
+  ? 'ca-app-pub-3940256099942544/2934735716'  // Google 공식 테스트 배너 ID
   : Platform.select({
       ios: 'ca-app-pub-2370970221825852/4848317827',
-    }) || TestIds?.BANNER;
+    });
 
 export const AdBanner = () => {
   const [isAdLoaded, setIsAdLoaded] = useState(false);
@@ -43,23 +44,8 @@ export const AdBanner = () => {
     }
   }, []);
 
-  // AdMob이 초기화되지 않았으면 로딩 표시
-  if (!isInitialized) {
-    return (
-      <View style={{
-        alignItems: 'center',
-        paddingVertical: 10,
-        minHeight: 70,
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center'
-      }}>
-        <Text style={{ color: '#666', fontSize: 12 }}>광고 로딩 중...</Text>
-      </View>
-    );
-  }
-
-  // BannerAd가 없으면 표시하지 않음
-  if (!BannerAd) {
+  // AdMob이 초기화되지 않았거나 BannerAd가 없으면 아무것도 표시하지 않음
+  if (!isInitialized || !BannerAd) {
     return null;
   }
 

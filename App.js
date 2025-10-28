@@ -24,52 +24,8 @@ export default function App() {
 
   useEffect(() => {
     initializeApp();
-
-    // 1. 알림 수신 리스너 - 앱이 포그라운드에 있을 때
-    const receivedSubscription = Notifications.addNotificationReceivedListener(async (notification) => {
-      console.log('\n🔔 [포그라운드] 알림 수신:', notification.request.content.body);
-      await rescheduleNotification(notification);
-    });
-
-    // 2. 알림 응답 리스너 - 사용자가 알림을 탭했을 때 (백그라운드/종료 상태)
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
-      console.log('\n👆 [백그라운드] 알림 탭:', response.notification.request.content.body);
-      await rescheduleNotification(response.notification);
-    });
-
-    return () => {
-      receivedSubscription.remove();
-      responseSubscription.remove();
-    };
   }, []);
 
-  const rescheduleNotification = async (notification) => {
-    // 알림 데이터에서 약 ID 추출
-    const medicineId = notification.request.content.data?.medicineId;
-    if (!medicineId) return;
-
-    // 해당 약 찾기
-    const jsonValue = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!jsonValue) return;
-
-    const savedMedicines = JSON.parse(jsonValue);
-    const medicine = savedMedicines.find(m => m.id === medicineId);
-    if (!medicine) return;
-
-    // 다음 알림 예약 (내일 같은 시간)
-    const nextNotificationId = await scheduleNextNotification(medicine);
-
-    if (nextNotificationId) {
-      // 약 정보에 새 알림 ID 저장
-      const updatedMedicines = savedMedicines.map(m =>
-        m.id === medicineId
-          ? { ...m, notificationId: nextNotificationId }
-          : m
-      );
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMedicines));
-      console.log('✅ 다음 알림 자동 예약 완료\n');
-    }
-  };
 
   const initializeApp = async () => {
     await requestPermissions();
@@ -108,20 +64,9 @@ export default function App() {
     if (!time) return null;
 
     try {
-      const now = new Date();
+      console.log(`💊 ${medicine.name} 매일 ${medicine.time}에 알림 예약`);
 
-      // 다음 알림 시간 계산
-      const targetDate = new Date();
-      targetDate.setHours(time.hours, time.minutes, 0, 0);
-
-      // 오늘 시간이 이미 지났으면 내일
-      if (targetDate <= now) {
-        targetDate.setDate(targetDate.getDate() + 1);
-      }
-
-      console.log(`💊 ${medicine.name} 다음 알림: ${targetDate.toLocaleString('ko-KR')}`);
-
-      // ✅ Date 객체를 직접 trigger로 전달
+      // ✅ DAILY 타입으로 매일 반복 (공식 문서 권장)
       const id = await Notifications.scheduleNotificationAsync({
         content: {
           title: '💊 약 먹을 시간이에요!',
@@ -130,10 +75,14 @@ export default function App() {
             medicineId: medicine.id,
           },
         },
-        trigger: targetDate,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour: time.hours,
+          minute: time.minutes,
+        },
       });
 
-      console.log(`✅ 알림 예약 완료 (${id.substring(0, 8)}...)\n`);
+      console.log(`✅ 매일 반복 알림 예약 완료 (ID: ${id.substring(0, 8)}...)\n`);
       return id;
     } catch (error) {
       console.error('❌ 스케줄링 오류:', error);
@@ -172,7 +121,7 @@ export default function App() {
       const updatedMedicines = [...medicines, newMedicine];
       await saveMedicines(updatedMedicines);
       setCurrentScreen('home');
-      Alert.alert('등록 완료', `${medicine.name}이(가) 등록되었어요!\n다음 알림이 예약되었습니다.`);
+      Alert.alert('등록 완료', `${medicine.name}이(가) 등록되었어요!\n매일 ${medicine.time}에 알림이 울립니다.`);
     } catch (error) {
       console.error('Error adding medicine:', error);
       Alert.alert('오류', '약 등록에 실패했습니다.');
@@ -307,8 +256,8 @@ export default function App() {
             <View style={styles.noticeBox}>
               <Text style={styles.noticeTitle}>📌 알림 안내</Text>
               <Text style={styles.noticeText}>
-                알림을 받은 후 앱을 실행하거나 알림을 탭해야{'\n'}
-                다음날 알림이 계속 예약됩니다.
+                약을 등록하면 매일 같은 시간에{'\n'}
+                자동으로 알림이 반복됩니다.
               </Text>
             </View>
           </View>
@@ -576,7 +525,7 @@ function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
                 <Text style={styles.notificationStatusIcon}>🔔</Text>
                 <Text style={styles.notificationStatusText}>
                   {medicine.notificationId
-                    ? '다음 알림이 예약되어 있어요'
+                    ? '매일 알림이 설정되어 있어요'
                     : '알림이 설정되지 않았어요'}
                 </Text>
               </View>
