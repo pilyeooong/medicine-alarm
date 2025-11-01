@@ -6,6 +6,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { AdBanner } from './components/AdBanner';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { t } from './translations';
+import { SettingsScreen } from './components/SettingsScreen';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -18,24 +21,42 @@ Notifications.setNotificationHandler({
 const STORAGE_KEY = '@medicines';
 
 export default function App() {
+  return (
+    <LanguageProvider>
+      <MedicineApp />
+    </LanguageProvider>
+  );
+}
+
+function MedicineApp() {
+  const { language } = useLanguage();
   const [currentScreen, setCurrentScreen] = useState('home');
   const [medicines, setMedicines] = useState([]);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     initializeApp();
   }, []);
 
+  useEffect(() => {
+    // 언어 변경 시 모든 알림 재예약
+    if (isInitialized && medicines.length > 0) {
+      rescheduleAllNotifications();
+    }
+  }, [language]);
+
 
   const initializeApp = async () => {
     await requestPermissions();
     await loadMedicines();
+    setIsInitialized(true);
   };
 
   const requestPermissions = async () => {
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('알림 권한이 필요합니다.');
+      Alert.alert(t('confirm', language), t('permissionRequired', language));
     }
   };
 
@@ -69,8 +90,8 @@ export default function App() {
       // ✅ DAILY 타입으로 매일 반복 (공식 문서 권장)
       const id = await Notifications.scheduleNotificationAsync({
         content: {
-          title: '💊 약 먹을 시간이에요!',
-          body: `${medicine.name} 복용하세요`,
+          title: t('notificationTitle', language),
+          body: `${t('notificationBody', language)}${medicine.name}`,
           data: {
             medicineId: medicine.id,
           },
@@ -93,13 +114,13 @@ export default function App() {
   const addMedicine = async (medicine) => {
     // 최대 개수 체크
     if (medicines.length >= 20) {
-      Alert.alert('등록 제한', '최대 20개까지만 등록할 수 있습니다.\n기존 약을 삭제한 후 다시 시도해주세요.');
+      Alert.alert(t('maxLimitTitle', language), t('maxLimitMessage', language));
       return;
     }
 
     const time = parseTime(medicine.time);
     if (!time) {
-      Alert.alert('오류', '시간 형식이 올바르지 않습니다. (예: 09:00)');
+      Alert.alert(t('confirm', language), t('invalidTimeFormat', language));
       return;
     }
 
@@ -107,7 +128,7 @@ export default function App() {
       const notificationId = await scheduleNextNotification(medicine);
 
       if (!notificationId) {
-        Alert.alert('오류', '알림 예약에 실패했습니다.');
+        Alert.alert(t('confirm', language), t('scheduleError', language));
         return;
       }
 
@@ -121,10 +142,10 @@ export default function App() {
       const updatedMedicines = [...medicines, newMedicine];
       await saveMedicines(updatedMedicines);
       setCurrentScreen('home');
-      Alert.alert('등록 완료', `${medicine.name}이(가) 등록되었어요!\n매일 ${medicine.time}에 알림이 울립니다.`);
+      Alert.alert(t('confirm', language), `${medicine.name}${t('addSuccess', language)}${medicine.time}${t('addSuccessTime', language)}`);
     } catch (error) {
       console.error('Error adding medicine:', error);
-      Alert.alert('오류', '약 등록에 실패했습니다.');
+      Alert.alert(t('confirm', language), t('addError', language));
     }
   };
 
@@ -148,7 +169,7 @@ export default function App() {
 
     const time = parseTime(updatedData.time);
     if (!time) {
-      Alert.alert('오류', '시간 형식이 올바르지 않습니다. (예: 09:00)');
+      Alert.alert(t('confirm', language), t('invalidTimeFormat', language));
       return;
     }
 
@@ -166,7 +187,7 @@ export default function App() {
       const notificationId = await scheduleNextNotification(updatedData);
 
       if (!notificationId) {
-        Alert.alert('오류', '알림 예약에 실패했습니다.');
+        Alert.alert(t('confirm', language), t('scheduleError', language));
         return;
       }
 
@@ -181,10 +202,10 @@ export default function App() {
       await saveMedicines(updatedMedicines);
       setCurrentScreen('home');
       setSelectedMedicine(null);
-      Alert.alert('수정 완료', `${updatedData.name}이(가) 수정되었어요!`);
+      Alert.alert(t('confirm', language), `${updatedData.name}${t('updateSuccess', language)}`);
     } catch (error) {
       console.error('Error updating medicine:', error);
-      Alert.alert('오류', '약 수정에 실패했습니다.');
+      Alert.alert(t('confirm', language), t('updateError', language));
     }
   };
 
@@ -196,8 +217,45 @@ export default function App() {
     return { hours, minutes };
   };
 
+  const rescheduleAllNotifications = async () => {
+    console.log('🔄 언어 변경 감지: 모든 알림 재예약 시작');
+
+    try {
+      const updatedMedicines = await Promise.all(
+        medicines.map(async (medicine) => {
+          // 기존 알림 취소
+          if (medicine.notificationId) {
+            try {
+              await Notifications.cancelScheduledNotificationAsync(medicine.notificationId);
+              console.log(`🗑️ ${medicine.name} 기존 알림 취소`);
+            } catch (error) {
+              console.error('Error canceling notification:', error);
+            }
+          }
+
+          // 새 언어로 알림 재예약
+          const newNotificationId = await scheduleNextNotification(medicine);
+
+          return {
+            ...medicine,
+            notificationId: newNotificationId,
+          };
+        })
+      );
+
+      await saveMedicines(updatedMedicines);
+      console.log('✅ 모든 알림 재예약 완료');
+    } catch (error) {
+      console.error('❌ 알림 재예약 실패:', error);
+    }
+  };
+
+  if (currentScreen === 'settings') {
+    return <SettingsScreen onBack={() => setCurrentScreen('home')} />;
+  }
+
   if (currentScreen === 'add') {
-    return <AddScreen onAdd={addMedicine} onBack={() => setCurrentScreen('home')} />;
+    return <AddScreen onAdd={addMedicine} onBack={() => setCurrentScreen('home')} language={language} />;
   }
 
   if (currentScreen === 'edit' && selectedMedicine) {
@@ -210,6 +268,7 @@ export default function App() {
           setSelectedMedicine(null);
         }}
         isEdit={true}
+        language={language}
       />
     );
   }
@@ -228,6 +287,7 @@ export default function App() {
           setCurrentScreen('home');
           setSelectedMedicine(null);
         }}
+        language={language}
       />
     );
   }
@@ -236,12 +296,20 @@ export default function App() {
     <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>💊 약먹을시간</Text>
-          <Text style={styles.headerSubtitle}>
-            {medicines.length > 0
-              ? `${medicines.length}/20`
-              : '복약 알림을 시작해보세요'}
-          </Text>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerTitle}>{t('appTitle', language)}</Text>
+            <Text style={styles.headerSubtitle}>
+              {medicines.length > 0
+                ? `${medicines.length}/20`
+                : t('medicineCount', language)}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setCurrentScreen('settings')}
+            style={styles.settingsButton}
+          >
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
         </View>
 
         {medicines.length === 0 ? (
@@ -251,13 +319,12 @@ export default function App() {
               style={styles.appLogo}
               resizeMode="contain"
             />
-            <Text style={styles.emptyTitle}>등록된 약이 없어요</Text>
-            <Text style={styles.emptyText}>+ 버튼을 눌러 복용할 약을 등록해보세요</Text>
+            <Text style={styles.emptyTitle}>{t('emptyTitle', language)}</Text>
+            <Text style={styles.emptyText}>{t('emptyText', language)}</Text>
             <View style={styles.noticeBox}>
-              <Text style={styles.noticeTitle}>📌 알림 안내</Text>
+              <Text style={styles.noticeTitle}>{t('noticeTitle', language)}</Text>
               <Text style={styles.noticeText}>
-                약을 등록하면 매일 같은 시간에{'\n'}
-                자동으로 알림이 반복됩니다.
+                {t('noticeText', language)}
               </Text>
             </View>
           </View>
@@ -280,12 +347,12 @@ export default function App() {
                     onPress={(e) => {
                       e.stopPropagation();
                       Alert.alert(
-                        '약 삭제',
-                        `"${item.name}"을(를) 삭제하시겠습니까?`,
+                        t('deleteConfirmTitle', language),
+                        `"${item.name}"${t('deleteConfirmMessage', language)}`,
                         [
-                          { text: '취소', style: 'cancel' },
+                          { text: t('cancel', language), style: 'cancel' },
                           {
-                            text: '삭제',
+                            text: t('delete', language),
                             style: 'destructive',
                             onPress: () => deleteMedicine(item.id),
                           },
@@ -300,8 +367,8 @@ export default function App() {
                   <Text style={styles.timeIcon}>⏰</Text>
                   <Text style={styles.timeText}>{item.time}</Text>
                 </View>
-                {item.dosage ? <Text style={styles.dosageText}>용량: {item.dosage}</Text> : null}
-                {item.memo ? <Text style={styles.memoText}>메모: {item.memo}</Text> : null}
+                {item.dosage ? <Text style={styles.dosageText}>{t('dosage', language)}: {item.dosage}</Text> : null}
+                {item.memo ? <Text style={styles.memoText}>{t('memo', language)}: {item.memo}</Text> : null}
               </TouchableOpacity>
             )}
             keyExtractor={item => item.id}
@@ -314,7 +381,7 @@ export default function App() {
           style={[styles.fab, medicines.length >= 20 && styles.fabDisabled]}
           onPress={() => {
             if (medicines.length >= 20) {
-              Alert.alert('등록 제한', '최대 20개까지만 등록할 수 있습니다.\n기존 약을 삭제한 후 다시 시도해주세요.');
+              Alert.alert(t('maxLimitTitle', language), t('maxLimitMessage', language));
             } else {
               setCurrentScreen('add');
             }
@@ -331,7 +398,7 @@ export default function App() {
   );
 }
 
-function AddScreen({ onAdd, onBack, medicine, isEdit }) {
+function AddScreen({ onAdd, onBack, medicine, isEdit, language }) {
   const [name, setName] = useState(medicine?.name || '');
   const [dosage, setDosage] = useState(medicine?.dosage || '');
   const [memo, setMemo] = useState(medicine?.memo || '');
@@ -356,7 +423,7 @@ function AddScreen({ onAdd, onBack, medicine, isEdit }) {
 
   const handleSave = () => {
     if (!name.trim()) {
-      Alert.alert('알림', '약 이름을 입력해주세요.');
+      Alert.alert(t('confirm', language), t('enterMedicineName', language));
       return;
     }
 
@@ -379,7 +446,7 @@ function AddScreen({ onAdd, onBack, medicine, isEdit }) {
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isEdit ? '약 수정' : '새 약 등록'}</Text>
+          <Text style={styles.headerTitle}>{isEdit ? t('editMedicine', language) : t('addMedicine', language)}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -389,17 +456,17 @@ function AddScreen({ onAdd, onBack, medicine, isEdit }) {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>약 이름 *</Text>
+            <Text style={styles.label}>{t('medicineName', language)} {t('required', language)}</Text>
             <TextInput
               style={styles.input}
-              placeholder="약 이름을 입력하세요"
+              placeholder={t('medicineNamePlaceholder', language)}
               value={name}
               onChangeText={setName}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>복용 시간 *</Text>
+            <Text style={styles.label}>{t('medicineTime', language)} {t('required', language)}</Text>
             <View style={styles.timePickerContainer}>
               <DateTimePicker
                 value={selectedTime}
@@ -413,20 +480,20 @@ function AddScreen({ onAdd, onBack, medicine, isEdit }) {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>용량 (선택)</Text>
+            <Text style={styles.label}>{t('medicineDosage', language)}</Text>
             <TextInput
               style={styles.input}
-              placeholder="예: 1정, 5ml"
+              placeholder={t('medicineDosagePlaceholder', language)}
               value={dosage}
               onChangeText={setDosage}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>메모 (선택)</Text>
+            <Text style={styles.label}>{t('medicineMemo', language)}</Text>
             <TextInput
               style={[styles.input, styles.memoInput]}
-              placeholder="식후 30분, 물과 함께 등"
+              placeholder={t('medicineMemoPlaceholder', language)}
               value={memo}
               onChangeText={setMemo}
               multiline
@@ -437,7 +504,7 @@ function AddScreen({ onAdd, onBack, medicine, isEdit }) {
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>{isEdit ? '수정하기' : '등록하기'}</Text>
+            <Text style={styles.saveButtonText}>{isEdit ? t('updateButton', language) : t('saveButton', language)}</Text>
           </TouchableOpacity>
         </View>
 
@@ -447,7 +514,7 @@ function AddScreen({ onAdd, onBack, medicine, isEdit }) {
   );
 }
 
-function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
+function DetailScreen({ medicine, onEdit, onDelete, onBack, language }) {
   const getTimeIcon = (time) => {
     if (!time || !time.includes(':')) return '⏰';
     const hour = parseInt(time.split(':')[0]);
@@ -466,7 +533,7 @@ function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>약 상세 정보</Text>
+          <Text style={styles.headerTitle}>{t('detailTitle', language)}</Text>
           <TouchableOpacity onPress={onEdit} style={styles.backButton}>
             <Text style={styles.editIcon}>✏️</Text>
           </TouchableOpacity>
@@ -483,14 +550,14 @@ function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
             </View>
 
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>약 이름</Text>
+              <Text style={styles.detailLabel}>{t('medicineName', language)}</Text>
               <Text style={styles.detailValue}>{medicine.name}</Text>
             </View>
 
             <View style={styles.detailDivider} />
 
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>복용 시간</Text>
+              <Text style={styles.detailLabel}>{t('medicineTime', language)}</Text>
               <View style={styles.detailTimeRow}>
                 <Text style={styles.detailTimeIcon}>{getTimeIcon(medicine.time)}</Text>
                 <Text style={styles.detailTimeValue}>{medicine.time}</Text>
@@ -501,7 +568,7 @@ function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
               <>
                 <View style={styles.detailDivider} />
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>용량</Text>
+                  <Text style={styles.detailLabel}>{t('dosage', language)}</Text>
                   <Text style={styles.detailValue}>{medicine.dosage}</Text>
                 </View>
               </>
@@ -511,7 +578,7 @@ function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
               <>
                 <View style={styles.detailDivider} />
                 <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>메모</Text>
+                  <Text style={styles.detailLabel}>{t('memo', language)}</Text>
                   <Text style={styles.detailMemoValue}>{medicine.memo}</Text>
                 </View>
               </>
@@ -520,13 +587,13 @@ function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
             <View style={styles.detailDivider} />
 
             <View style={styles.detailSection}>
-              <Text style={styles.detailLabel}>알림 상태</Text>
+              <Text style={styles.detailLabel}>{t('notificationStatus', language)}</Text>
               <View style={styles.notificationStatusRow}>
                 <Text style={styles.notificationStatusIcon}>🔔</Text>
                 <Text style={styles.notificationStatusText}>
                   {medicine.notificationId
-                    ? '매일 알림이 설정되어 있어요'
-                    : '알림이 설정되지 않았어요'}
+                    ? t('notificationEnabled', language)
+                    : t('notificationDisabled', language)}
                 </Text>
               </View>
             </View>
@@ -536,12 +603,12 @@ function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
             style={styles.deleteDetailButton}
             onPress={() => {
               Alert.alert(
-                '약 삭제',
-                `"${medicine.name}"을(를) 삭제하시겠습니까?`,
+                t('deleteConfirmTitle', language),
+                `"${medicine.name}"${t('deleteConfirmMessage', language)}`,
                 [
-                  { text: '취소', style: 'cancel' },
+                  { text: t('cancel', language), style: 'cancel' },
                   {
-                    text: '삭제',
+                    text: t('delete', language),
                     style: 'destructive',
                     onPress: onDelete,
                   },
@@ -549,7 +616,7 @@ function DetailScreen({ medicine, onEdit, onDelete, onBack }) {
               );
             }}
           >
-            <Text style={styles.deleteDetailButtonText}>🗑️ 약 삭제</Text>
+            <Text style={styles.deleteDetailButtonText}>{t('deleteButton', language)}</Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -575,6 +642,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
+  headerLeft: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
@@ -584,6 +654,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#718096',
     marginTop: 4,
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
+    backgroundColor: '#F0F4F8',
+  },
+  settingsIcon: {
+    fontSize: 24,
   },
   backButton: {
     width: 40,

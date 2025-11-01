@@ -1,6 +1,6 @@
 {
   "name": "medicine-alarm",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "main": "index.js",
   "homepage": "https://pilyeooong.github.io/medicine-alarm",
   "scripts": {
@@ -9,7 +9,10 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export:web",
-    "deploy": "gh-pages -d web-build"
+    "deploy": "gh-pages -d web-build",
+    "build:ios": "eas build --platform ios --profile production",
+    "build:ios:preview": "eas build --platform ios --profile preview",
+    "submit:ios": "eas submit --platform ios"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
@@ -17,6 +20,7 @@
     "canvas": "^3.2.0",
     "expo": "~54.0.20",
     "expo-dev-client": "^6.0.16",
+    "expo-localization": "^17.0.7",
     "expo-notifications": "^0.32.12",
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",

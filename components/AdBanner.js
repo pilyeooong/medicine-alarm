@@ -52,7 +52,7 @@ export const AdBanner = () => {
   return (
     <View style={{
       alignItems: 'center',
-      backgroundColor: '#e3f2fd',
+      backgroundColor: 'transparent',
       paddingVertical: 10,
       minHeight: 70,
       justifyContent: 'center'
